@@ -1,0 +1,6 @@
+# Compiled artifacts
+pam_k8s_sa.h
+pam_k8s_sa.so
+
+# Nix build result symlink
+result
