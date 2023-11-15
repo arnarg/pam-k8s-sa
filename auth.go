@@ -2,11 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"fmt"
-	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -26,14 +22,14 @@ func pamAuthenticate(l logger, username, token string, conf *config) error {
 	}
 
 	// Create a custom insecure context as issuer and discovery URLs don't match
-	if conf.Issuer != conf.DiscoveryURL {
-		l.Warnf("discovery url and issuer don't match, creating an insecure issuer url context")
+	if conf.ServerURL != conf.Issuer {
+		l.Warnf("server url and issuer don't match, creating an insecure issuer url context")
 
 		ctx = oidc.InsecureIssuerURLContext(ctx, conf.Issuer)
 	}
 
 	// Create a provider for OIDC
-	provider, err := oidc.NewProvider(ctx, conf.DiscoveryURL)
+	provider, err := oidc.NewProvider(ctx, conf.ServerURL)
 	if err != nil {
 		return fmt.Errorf("unable to discover OIDC endpoint: %s", err)
 	}
@@ -58,27 +54,12 @@ func pamAuthenticate(l logger, username, token string, conf *config) error {
 }
 
 func createClientContext(l logger, ctx context.Context, conf *config) (context.Context, error) {
-	tlsConf := &tls.Config{}
-
-	if conf.VerifyTLS {
-		certData, err := os.ReadFile(conf.CAFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not read ca file: %s", err)
-		}
-
-		cp := x509.NewCertPool()
-		if ok := cp.AppendCertsFromPEM(certData); !ok {
-			return nil, fmt.Errorf("could not parse ca file data")
-		}
-
-		tlsConf.RootCAs = cp
-	} else {
-		l.Warnf("skipping tls verification")
-
-		tlsConf.InsecureSkipVerify = true
+	client, err := newHttpClient(l, conf)
+	if err != nil {
+		return nil, err
 	}
 
-	return oidc.ClientContext(ctx, &http.Client{Transport: &http.Transport{TLSClientConfig: tlsConf}}), nil
+	return oidc.ClientContext(ctx, client), nil
 }
 
 func matchUserSubject(username, subject string) error {

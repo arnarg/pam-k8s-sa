@@ -7,23 +7,28 @@ import (
 )
 
 var (
-	defaultIssuer   = "https://kubernetes.default.svc.cluster.local"
-	defaultAudience = "https://kubernetes.default.svc.cluster.local"
-	defaultCAFile   = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	defaultServerURL = "https://kubernetes.default.svc.cluster.local"
+	defaultIssuer    = "https://kubernetes.default.svc.cluster.local"
+	defaultAudience  = "https://kubernetes.default.svc.cluster.local"
+	defaultCAFile    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	defaultTokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 )
 
 type config struct {
-	DiscoveryURL string
-	Issuer       string
-	Audience     string
-	CAFile       string
-	VerifyTLS    bool
+	ServerURL string
+	Issuer    string
+	Audience  string
+	TokenFile string
+	CAFile    string
+	VerifyTLS bool
 }
 
 func parseConfig(args []string) (*config, error) {
 	conf := &config{
+		ServerURL: defaultServerURL,
 		Issuer:    defaultIssuer,
 		Audience:  defaultAudience,
+		TokenFile: defaultTokenFile,
 		CAFile:    defaultCAFile,
 		VerifyTLS: true,
 	}
@@ -32,12 +37,14 @@ func parseConfig(args []string) (*config, error) {
 		opt := strings.Split(arg, "=")
 
 		switch opt[0] {
-		case "discovery_url":
-			conf.DiscoveryURL = opt[1]
+		case "server_url":
+			conf.ServerURL = opt[1]
 		case "issuer":
 			conf.Issuer = opt[1]
 		case "audience":
 			conf.Audience = opt[1]
+		case "token_file":
+			conf.TokenFile = opt[1]
 		case "ca_file":
 			conf.CAFile = opt[1]
 		case "verify_tls":
@@ -47,10 +54,6 @@ func parseConfig(args []string) (*config, error) {
 			}
 			conf.VerifyTLS = val
 		}
-	}
-
-	if conf.DiscoveryURL == "" {
-		conf.DiscoveryURL = conf.Issuer
 	}
 
 	return conf, nil
