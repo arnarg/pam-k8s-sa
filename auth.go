@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -46,7 +48,7 @@ func pamAuthenticate(l logger, username, token string, conf *config) error {
 	}
 
 	// Verify username with subject
-	if err := matchUserSubject(username, idToken.Subject); err != nil {
+	if err := matchUserSubject(username, idToken.Subject, conf.UsernameTemplate); err != nil {
 		return err
 	}
 
@@ -62,19 +64,47 @@ func createClientContext(l logger, ctx context.Context, conf *config) (context.C
 	return oidc.ClientContext(ctx, client), nil
 }
 
-func matchUserSubject(username, subject string) error {
-	parts := strings.SplitN(username, "$", 2)
+func matchUserSubject(username, subject, userTpl string) error {
+	// Subject should be in the form "system:serviceaccount:namespace:name"
+	parts := strings.Split(subject, ":")
 
-	// Check that split was correct
-	if len(parts) != 2 {
-		return fmt.Errorf("username does not fit the pattern '{{service_account}}${{namespace}}'")
+	// Check that subject parsing is correct
+	if len(parts) != 4 {
+		return fmt.Errorf("subject format is unknown: '%s'", subject)
 	}
 
-	// Compare username data with subject
-	expected := fmt.Sprintf("system:serviceaccount:%s:%s", parts[1], parts[0])
-	if subject != expected {
-		return fmt.Errorf("token subject '%s' did not match the expected '%s'", subject, expected)
+	// Render template into expected username
+	expected, err := templateUsername(parts[3], parts[2], userTpl)
+	if err != nil {
+		return err
+	}
+
+	// Compare provided username with expected username
+	if username != expected {
+		return fmt.Errorf("username did not match expected username for token")
 	}
 
 	return nil
+}
+
+func templateUsername(name, namespace, userTpl string) (string, error) {
+	tpl, err := template.New("").Funcs(template.FuncMap{
+		"replace": func(old, new, input string) string { return strings.ReplaceAll(input, old, new) },
+	}).Parse(userTpl)
+	if err != nil {
+		return "", fmt.Errorf("could not parse username template: %s", err)
+	}
+
+	buf := &bytes.Buffer{}
+
+	// Render template
+	data := map[string]string{
+		"Name":      name,
+		"Namespace": namespace,
+	}
+	if err := tpl.Execute(buf, data); err != nil {
+		return "", fmt.Errorf("could not render username template:%s", err)
+	}
+
+	return buf.String(), nil
 }

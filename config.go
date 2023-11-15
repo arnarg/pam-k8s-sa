@@ -7,30 +7,33 @@ import (
 )
 
 var (
-	defaultServerURL = "https://kubernetes.default.svc.cluster.local"
-	defaultIssuer    = "https://kubernetes.default.svc.cluster.local"
-	defaultAudience  = "https://kubernetes.default.svc.cluster.local"
-	defaultCAFile    = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	defaultTokenFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultServerURL        = "https://kubernetes.default.svc.cluster.local"
+	defaultIssuer           = "https://kubernetes.default.svc.cluster.local"
+	defaultAudience         = "https://kubernetes.default.svc.cluster.local"
+	defaultCAFile           = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	defaultTokenFile        = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	defaultUsernameTemplate = "{{.Name | replace \"-\" \"_\"}}${{.Namespace | replace \"-\" \"_\"}}"
 )
 
 type config struct {
-	ServerURL string
-	Issuer    string
-	Audience  string
-	TokenFile string
-	CAFile    string
-	VerifyTLS bool
+	ServerURL        string
+	Issuer           string
+	Audience         string
+	UsernameTemplate string
+	TokenFile        string
+	CAFile           string
+	VerifyTLS        bool
 }
 
 func parseConfig(args []string) (*config, error) {
 	conf := &config{
-		ServerURL: defaultServerURL,
-		Issuer:    defaultIssuer,
-		Audience:  defaultAudience,
-		TokenFile: defaultTokenFile,
-		CAFile:    defaultCAFile,
-		VerifyTLS: true,
+		ServerURL:        defaultServerURL,
+		Issuer:           defaultIssuer,
+		Audience:         defaultAudience,
+		UsernameTemplate: defaultUsernameTemplate,
+		TokenFile:        defaultTokenFile,
+		CAFile:           defaultCAFile,
+		VerifyTLS:        true,
 	}
 
 	for _, arg := range args {
@@ -43,6 +46,8 @@ func parseConfig(args []string) (*config, error) {
 			conf.Issuer = opt[1]
 		case "audience":
 			conf.Audience = opt[1]
+		case "username_template":
+			conf.UsernameTemplate = opt[1]
 		case "token_file":
 			conf.TokenFile = opt[1]
 		case "ca_file":
