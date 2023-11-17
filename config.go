@@ -25,8 +25,8 @@ type config struct {
 	VerifyTLS        bool
 }
 
-func parseConfig(args []string) (*config, error) {
-	conf := &config{
+func defaultConfig() *config {
+	return &config{
 		ServerURL:        defaultServerURL,
 		Issuer:           defaultIssuer,
 		Audience:         defaultAudience,
@@ -35,6 +35,10 @@ func parseConfig(args []string) (*config, error) {
 		CAFile:           defaultCAFile,
 		VerifyTLS:        true,
 	}
+}
+
+func parseConfig(args []string) (*config, error) {
+	conf := defaultConfig()
 
 	for _, arg := range args {
 		opt := strings.Split(arg, "=")

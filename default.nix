@@ -26,6 +26,14 @@ buildGoModule {
     runHook postBuild
   '';
 
+  checkPhase = ''
+    runHook preCheck
+
+    go test -v -p $NIX_BUILD_CORES .
+
+    runHook postCheck
+  '';
+
   installPhase = ''
     runHook preInstall
 
